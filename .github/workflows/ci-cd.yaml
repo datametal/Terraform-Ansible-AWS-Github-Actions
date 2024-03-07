@@ -2,10 +2,10 @@ name: CI/CD Pipeline
 run-name: "🛠️ ${{ github.event.head_commit.message }} (${{ github.sha }})"
 
 on:
-  pull_request:
-  push:
-    branches:
-      - olt
+  # pull_request:
+  # push:
+  #   branches:
+  #     - olt
 
 jobs:
   build:
@@ -58,7 +58,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-      
+
       - name: Cache Node Modules
         uses: actions/cache@v3
         with:
@@ -70,7 +70,7 @@ jobs:
 
       - name: 😂 Lint code
         run: cd frontend && npm run lint
-  
+
   test:
     name: 🧪 Run Unit Tests
     needs: build
@@ -94,7 +94,7 @@ jobs:
 
       - name: Run the unit tests
         run: cd frontend && npm run test-ci
-  
+
   static-analysis:
     name: 🔬 Run Static Code Analysis
     needs: [build]
