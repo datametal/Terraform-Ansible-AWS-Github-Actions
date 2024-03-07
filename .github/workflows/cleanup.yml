@@ -1,0 +1,103 @@
+name: Cleanup
+run-name: "🗑 CD: Cleaning up ${{ inputs.env_name }} after ${{ inputs.reason }} (${{ inputs.ref }})"
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      env_name:
+        required: true
+        type: string
+      reason:
+        required: true
+        type: string
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  destroy_frontend:
+    name: ❌ Destroy Frontend Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Destroy Frontend
+        uses: dflook/terraform-destroy@v1
+        with:
+          path: util/terraform/frontend
+          workspace: anyhasher-frontend-${{ inputs.ref }}
+          variables: |
+            bucket_name = "anyhasher-frontend-${{ inputs.ref }}"
+
+  destroy_backend:
+    name: ❌ Destroy Backend Infrastructure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Destroy Backend
+        uses: dflook/terraform-destroy@v1
+        with:
+          path: util/terraform/backend
+          workspace: anyhasher-backend-${{ inputs.ref }}
+          variables: |
+            instance_name = "anyhasher-backend-${{ inputs.ref }}"
+
+  cleanup_tag:
+    name: Clean up the old blue tag
+    needs: [destroy_backend, destroy_frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for old blue tag
+        uses: mukunku/tag-exists-action@v1.2.0
+        id: checkTag
+        with:
+          tag: "blue/${{ inputs.ref }}"
+
+      - name: Remove old tag
+        if: steps.checkTag.outputs.exists == 'true'
+
+        run: |
+          git fetch origin
+          TAG="blue/${{ inputs.ref }}"
+          git push --delete origin $TAG
+
+  notify:
+    name: Notify team that environment was removed
+    needs: [cleanup_tag]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo Need to hook up slack here!
