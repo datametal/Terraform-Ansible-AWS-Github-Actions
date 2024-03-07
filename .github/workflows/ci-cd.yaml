@@ -1,11 +1,11 @@
-name: CI/CD Pipeline
+name: Big Bang CI/CD Pipeline
 run-name: "🛠️ ${{ github.event.head_commit.message }} (${{ github.sha }})"
 
 on:
   pull_request:
   push:
     branches:
-      - olt
+      - big-bang-demo
 
 jobs:
   build:
@@ -137,7 +137,7 @@ jobs:
       - lint
       - test
       - static-analysis
-    if: github.ref == 'refs/heads/olt'
+    #if: github.ref == 'refs/heads/main'
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     permissions:
